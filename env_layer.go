@@ -21,12 +21,12 @@ func (el *envLoader) Load() (map[string]interface{}, error) {
 	}
 
 	for _, env := range os.Environ() {
-		env = strings.ToLower(env)
 		kv := strings.SplitN(env, "=", 2)
 		k, v := kv[0], kv[1]
 
 		if strings.HasPrefix(k, el.prefix) {
 			k = strings.TrimPrefix(k, el.prefix)
+			k = strings.ToLower(k)
 
 			where := el.data
 			parts := strings.Split(k, el.envDelimiter)
