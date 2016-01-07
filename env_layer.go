@@ -34,9 +34,18 @@ func (el *envLoader) Load() (map[string]interface{}, error) {
 			for _, part := range parts {
 				next, found := where[part]
 				if !found {
-					where[part] = make(map[string]interface{})
-					next = where[part]
+					next = make(map[string]interface{})
+					where[part] = next
 				}
+
+				switch next.(type) {
+				case string:
+					n := make(map[string]interface{})
+					n[""] = next
+					next = n
+					where[part] = next
+				}
+
 				where = next.(map[string]interface{})
 			}
 
