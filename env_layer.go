@@ -1,4 +1,4 @@
-package onion
+package onionext
 
 import (
 	"os"
