@@ -55,6 +55,16 @@ type Int64Param struct {
 	value int64
 }
 
+type Float32Param struct {
+	baseParam
+	value float32
+}
+
+type Float64Param struct {
+	baseParam
+	value float64
+}
+
 type DurationParam struct {
 	baseParam
 	value time.Duration
@@ -109,6 +119,18 @@ func (p *ParamSet) Int64(key string, def int64) *Int64Param {
 	return ip
 }
 
+func (p *ParamSet) Float32(key string, def float32) *Float32Param {
+	fp := &Float32Param{baseParam{0, key}, def}
+	p.params = append(p.params, fp)
+	return fp
+}
+
+func (p *ParamSet) Float64(key string, def float64) *Float64Param {
+	fp := &Float64Param{baseParam{0, key}, def}
+	p.params = append(p.params, fp)
+	return fp
+}
+
 func (p *ParamSet) Duration(key string, def time.Duration) *DurationParam {
 	dp := &DurationParam{baseParam{0, key}, def}
 	p.params = append(p.params, dp)
@@ -119,10 +141,14 @@ func (sp *StringParam) parse(set *ParamSet)   { sp.value = set.onion.GetString(s
 func (bp *BoolParam) parse(set *ParamSet)     { bp.value = set.onion.GetBool(bp.baseParam.key) }
 func (ip *IntParam) parse(set *ParamSet)      { ip.value = set.onion.GetInt(ip.baseParam.key) }
 func (ip *Int64Param) parse(set *ParamSet)    { ip.value = set.onion.GetInt64(ip.baseParam.key) }
+func (fp *Float32Param) parse(set *ParamSet)  { fp.value = set.onion.GetFloat32(fp.baseParam.key) }
+func (fp *Float64Param) parse(set *ParamSet)  { fp.value = set.onion.GetFloat64(fp.baseParam.key) }
 func (dp *DurationParam) parse(set *ParamSet) { dp.value = set.onion.GetDuration(dp.baseParam.key) }
 
 func (sp *StringParam) Get() string          { return sp.value }
 func (bp *BoolParam) Get() bool              { return bp.value }
 func (ip *IntParam) Get() int                { return ip.value }
 func (ip *Int64Param) Get() int64            { return ip.value }
+func (fp *Float32Param) Get() float32        { return fp.value }
+func (fp *Float64Param) Get() float64        { return fp.value }
 func (dp *DurationParam) Get() time.Duration { return dp.value }
