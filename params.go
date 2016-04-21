@@ -1,6 +1,7 @@
 package onionext
 
 import (
+	"net/url"
 	"time"
 
 	"github.com/fzerorubigd/onion"
@@ -17,11 +18,11 @@ type baseParam struct {
 }
 
 type paramLoader interface {
-	validate(set *ParamSet) bool
-	parse(set *ParamSet)
+	init(set *ParamSet) bool
+	parse(found bool, set *ParamSet) error
 }
 
-func (p *baseParam) validate(set *ParamSet) bool {
+func (p *baseParam) init(set *ParamSet) bool {
 	p.state |= paramLoaded
 
 	if _, ok := set.onion.Get(p.key); ok {
@@ -43,6 +44,18 @@ type StringParam struct {
 type StringSliceParam struct {
 	baseParam
 	value []string
+}
+
+type URLParam struct {
+	baseParam
+	def   string
+	value *url.URL
+}
+
+type URLSliceParam struct {
+	baseParam
+	def   []string
+	value []*url.URL
 }
 
 type BoolParam struct {
@@ -93,8 +106,8 @@ func (p *ParamSet) Load(layers []onion.Layer) error {
 	}
 
 	for _, param := range p.params {
-		if param.validate(p) {
-			param.parse(p)
+		if err := param.parse(param.init(p), p); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -108,6 +121,18 @@ func (p *ParamSet) String(key string, def string) *StringParam {
 
 func (p *ParamSet) StringSlice(key string, def []string) *StringSliceParam {
 	sp := &StringSliceParam{baseParam{0, key}, def}
+	p.params = append(p.params, sp)
+	return sp
+}
+
+func (p *ParamSet) URL(key string, def string) *URLParam {
+	sp := &URLParam{baseParam{0, key}, def, nil}
+	p.params = append(p.params, sp)
+	return sp
+}
+
+func (p *ParamSet) URLSlice(key string, def []string) *URLSliceParam {
+	sp := &URLSliceParam{baseParam{0, key}, def, nil}
 	p.params = append(p.params, sp)
 	return sp
 }
@@ -148,19 +173,114 @@ func (p *ParamSet) Duration(key string, def time.Duration) *DurationParam {
 	return dp
 }
 
-func (sp *StringParam) parse(set *ParamSet) { sp.value = set.onion.GetString(sp.baseParam.key) }
-func (sp *StringSliceParam) parse(set *ParamSet) {
-	sp.value = set.onion.GetStringSlice(sp.baseParam.key)
+func (sp *StringParam) parse(found bool, set *ParamSet) error {
+	if found {
+		sp.value = set.onion.GetString(sp.baseParam.key)
+	}
+	return nil
 }
-func (bp *BoolParam) parse(set *ParamSet)     { bp.value = set.onion.GetBool(bp.baseParam.key) }
-func (ip *IntParam) parse(set *ParamSet)      { ip.value = set.onion.GetInt(ip.baseParam.key) }
-func (ip *Int64Param) parse(set *ParamSet)    { ip.value = set.onion.GetInt64(ip.baseParam.key) }
-func (fp *Float32Param) parse(set *ParamSet)  { fp.value = set.onion.GetFloat32(fp.baseParam.key) }
-func (fp *Float64Param) parse(set *ParamSet)  { fp.value = set.onion.GetFloat64(fp.baseParam.key) }
-func (dp *DurationParam) parse(set *ParamSet) { dp.value = set.onion.GetDuration(dp.baseParam.key) }
+
+func (sp *StringSliceParam) parse(found bool, set *ParamSet) error {
+	if found {
+		sp.value = set.onion.GetStringSlice(sp.baseParam.key)
+	}
+	return nil
+}
+
+func parseURLS(strs []string) ([]*url.URL, error) {
+	parsed := make([]*url.URL, len(strs))
+	for i, str := range strs {
+		if value, err := url.Parse(str); err != nil {
+			return nil, err
+		} else {
+			parsed[i] = value
+		}
+	}
+	return parsed, nil
+}
+
+func (sp *URLParam) parse(found bool, set *ParamSet) error {
+	if parsed, err := parseURLS([]string{sp.def}); err != nil {
+		return err
+	} else {
+		sp.value = parsed[0]
+	}
+
+	if found {
+		if parsed, err := parseURLS([]string{set.onion.GetString(sp.key)}); err != nil {
+			return err
+		} else {
+			sp.value = parsed[0]
+		}
+	}
+
+	return nil
+}
+
+func (sp *URLSliceParam) parse(found bool, set *ParamSet) error {
+	if parsed, err := parseURLS(sp.def); err != nil {
+		return err
+	} else {
+		sp.value = parsed
+	}
+
+	if found {
+		if parsed, err := parseURLS(set.onion.GetStringSlice(sp.key)); err != nil {
+			return err
+		} else {
+			sp.value = parsed
+		}
+	}
+
+	return nil
+}
+
+func (bp *BoolParam) parse(found bool, set *ParamSet) error {
+	if found {
+		bp.value = set.onion.GetBool(bp.baseParam.key)
+	}
+	return nil
+}
+
+func (ip *IntParam) parse(found bool, set *ParamSet) error {
+	if found {
+		ip.value = set.onion.GetInt(ip.baseParam.key)
+	}
+	return nil
+}
+
+func (ip *Int64Param) parse(found bool, set *ParamSet) error {
+	if found {
+		ip.value = set.onion.GetInt64(ip.baseParam.key)
+	}
+	return nil
+}
+
+func (fp *Float32Param) parse(found bool, set *ParamSet) error {
+	if found {
+		fp.value = set.onion.GetFloat32(fp.baseParam.key)
+	}
+	return nil
+}
+
+func (fp *Float64Param) parse(found bool, set *ParamSet) error {
+	if found {
+		fp.value = set.onion.GetFloat64(fp.baseParam.key)
+	}
+	return nil
+}
+
+func (dp *DurationParam) parse(found bool, set *ParamSet) error {
+	if found {
+		dp.value = set.onion.GetDuration(dp.baseParam.key)
+	}
+	return nil
+}
 
 func (sp *StringParam) Get() string          { return sp.value }
 func (sp *StringSliceParam) Get() []string   { return sp.value }
+func (up *URLParam) Get() *url.URL           { return up.value }
+func (up *URLSliceParam) Get() []*url.URL    { return up.value }
 func (bp *BoolParam) Get() bool              { return bp.value }
 func (ip *IntParam) Get() int                { return ip.value }
 func (ip *Int64Param) Get() int64            { return ip.value }
