@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/fzerorubigd/onion"
+	"gopkg.in/fzerorubigd/onion.v2"
 )
 
 type envLoader struct {
