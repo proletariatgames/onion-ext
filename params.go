@@ -3,7 +3,7 @@ package onionext
 import (
 	"time"
 
-	"github.com/fzerorubigd/onion"
+	"gopkg.in/fzerorubigd/onion.v2"
 )
 
 const (
